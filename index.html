@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>🎧 英文單字聽寫小教室</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { kid: ['Fredoka', '"Noto Sans TC"', 'system-ui', 'sans-serif'] } } } };
+</script>
+<style>
+  body { font-family: Fredoka, "Noto Sans TC", system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+  .bg-kid { background: radial-gradient(circle at 10% 10%, #fff7ae 0 12%, transparent 13%),
+                        radial-gradient(circle at 90% 20%, #ffd6e7 0 10%, transparent 11%),
+                        radial-gradient(circle at 80% 90%, #c9f2ff 0 14%, transparent 15%),
+                        linear-gradient(160deg, #e0f4ff 0%, #fff4e0 100%); }
+  .btn-3d { box-shadow: 0 6px 0 rgba(0,0,0,.18); transition: transform .08s, box-shadow .08s; }
+  .btn-3d:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  .btn-3d:disabled { opacity: .45; cursor: not-allowed; }
+  .pill[aria-pressed="true"] { background: #0ea5e9; color: #fff; border-color: #0284c7; }
+  .ring-track { stroke: #e2e8f0; }
+  .ring-bar { stroke: #22c55e; transition: stroke-dashoffset .25s linear; }
+  @keyframes bounceIn { 0%{transform:scale(.6);opacity:0} 70%{transform:scale(1.08);opacity:1} 100%{transform:scale(1)} }
+  .pop { animation: bounceIn .45s ease-out; }
+  @keyframes wave { 0%,100%{transform:scaleY(.4)} 50%{transform:scaleY(1)} }
+  .wave span { display:inline-block; width:8px; margin:0 3px; height:36px; border-radius:6px; background:#0ea5e9; animation: wave 0.9s infinite ease-in-out; }
+  .wave span:nth-child(2){animation-delay:.15s;background:#f472b6}
+  .wave span:nth-child(3){animation-delay:.3s;background:#facc15}
+  .wave span:nth-child(4){animation-delay:.45s;background:#22c55e}
+  .hidden-view { display: none !important; }
+</style>
+</head>
+<body class="bg-kid min-h-screen text-slate-700">
+
+<!-- ================= 頂部列 ================= -->
+<header class="max-w-3xl mx-auto px-4 pt-4 flex items-center justify-between gap-2">
+  <h1 class="text-xl sm:text-2xl font-bold text-sky-700 flex items-center gap-2">🎧 單字聽寫小教室</h1>
+  <div class="flex gap-2">
+    <button id="btnAnswerTop" class="btn-3d bg-amber-300 text-amber-900 rounded-2xl px-3 py-2 text-sm sm:text-base font-bold">🔒 看解答</button>
+    <button id="btnParent" class="btn-3d bg-white text-slate-600 rounded-2xl px-3 py-2 text-sm sm:text-base font-bold">⚙️ 家長</button>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-4 py-4 pb-16">
+
+  <!-- ================= 家長設定畫面 ================= -->
+  <section id="viewSettings" class="hidden-view">
+    <div class="bg-white/90 rounded-3xl shadow-xl p-5 sm:p-7 space-y-6">
+      <div class="flex items-center justify-between">
+        <h2 class="text-2xl font-bold text-slate-800">👨‍👩‍👧 家長設定</h2>
+        <span class="text-xs text-slate-400">設定會自動記在這台裝置</span>
+      </div>
+
+      <!-- 單字清單 -->
+      <div>
+        <label class="font-bold text-lg block mb-1">📝 本次考試單字</label>
+        <p class="text-sm text-slate-500 mb-2">每行一個單字，可加中文意思（選填）。例如：<code class="bg-slate-100 px-1 rounded">apple 蘋果</code>、<code class="bg-slate-100 px-1 rounded">ice cream, 冰淇淋</code></p>
+        <textarea id="wordInput" rows="9" class="w-full rounded-2xl border-2 border-sky-200 focus:border-sky-400 outline-none p-3 text-lg font-mono" placeholder="apple 蘋果&#10;banana 香蕉&#10;cat 貓"></textarea>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          <span id="wordCount" class="text-sm font-bold text-sky-700 bg-sky-50 rounded-full px-3 py-1">已辨識 0 個單字</span>
+          <button id="btnSample" class="text-sm rounded-full px-3 py-1 bg-slate-100 hover:bg-slate-200">放入範例</button>
+          <button id="btnClear" class="text-sm rounded-full px-3 py-1 bg-slate-100 hover:bg-slate-200">清空</button>
+        </div>
+        <div id="wordPreview" class="flex flex-wrap gap-2 mt-3 max-h-40 overflow-auto"></div>
+      </div>
+
+      <!-- 播放設定 -->
+      <div class="grid sm:grid-cols-2 gap-5">
+        <div>
+          <div class="font-bold mb-2">🐢 朗讀速度</div>
+          <div class="flex gap-2" data-group="rate">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="0.6">慢</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="0.85">正常</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="1.05">快</button>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2">🔁 每個單字唸幾遍</div>
+          <div class="flex gap-2" data-group="repeat">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="1">1 遍</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="2">2 遍</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="3">3 遍</button>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2">⏱️ 寫字時間（每題間隔）</div>
+          <div class="flex gap-2" data-group="gap">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="5">5 秒</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="8">8 秒</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="10">10 秒</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="15">15 秒</button>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2">🎲 出題順序</div>
+          <div class="flex gap-2" data-group="mode">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="order">照順序</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="random">隨機打亂</button>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2">🗣️ 口音</div>
+          <div class="flex gap-2" data-group="accent">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="en-US">🇺🇸 美式</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="en-GB">🇬🇧 英式</button>
+          </div>
+        </div>
+        <div>
+          <div class="font-bold mb-2">🎙️ 聲音</div>
+          <div class="flex gap-2">
+            <select id="voiceSelect" class="flex-1 min-w-0 border-2 rounded-xl py-2 px-2 bg-white"></select>
+            <button id="btnTestVoice" class="btn-3d bg-sky-500 text-white rounded-xl px-3 font-bold whitespace-nowrap">🔊 試聽</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <label class="flex items-center gap-3 text-base"><input id="optNumber" type="checkbox" class="w-5 h-5 accent-sky-500"> 每題先唸「Number 1」題號</label>
+        <label class="flex items-center gap-3 text-base"><input id="optChinese" type="checkbox" class="w-5 h-5 accent-sky-500"> 唸完英文後再唸中文意思（有填中文的單字才會唸）</label>
+      </div>
+
+      <!-- 密碼 -->
+      <div class="bg-amber-50 rounded-2xl p-4">
+        <div class="font-bold mb-2">🔑 家長密碼（看解答、進設定都要用）</div>
+        <div class="flex flex-wrap gap-2">
+          <input id="newPw" type="password" autocomplete="new-password" autocapitalize="off" spellcheck="false" placeholder="輸入新密碼" class="flex-1 min-w-[140px] border-2 border-amber-200 rounded-xl px-3 py-2 outline-none focus:border-amber-400">
+          <button id="btnSavePw" class="btn-3d bg-amber-400 text-amber-900 rounded-xl px-4 py-2 font-bold">更改密碼</button>
+        </div>
+        <p id="newPwShow" class="text-lg font-bold text-amber-800 mt-2 min-h-[1.75rem]"></p>
+        <p id="pwHint" class="text-xs text-slate-500 mt-2">預設密碼是 1234，建議改成小朋友不知道的密碼。</p>
+      </div>
+
+      <button id="btnGoQuiz" class="btn-3d w-full bg-green-500 hover:bg-green-600 text-white rounded-3xl py-4 text-2xl font-bold">✅ 儲存，交給小朋友開始！</button>
+    </div>
+  </section>
+
+  <!-- ================= 測驗畫面 ================= -->
+  <section id="viewQuiz" class="hidden-view">
+    <div class="bg-white/90 rounded-3xl shadow-xl p-5 sm:p-8 text-center">
+
+      <!-- 準備 -->
+      <div id="stageReady" class="py-4">
+        <div class="text-7xl mb-3">✏️📄</div>
+        <h2 class="text-3xl sm:text-4xl font-bold text-slate-800 mb-2">準備好紙和筆了嗎？</h2>
+        <p class="text-lg text-slate-500 mb-1">仔細聽，把聽到的單字寫在紙上喔！</p>
+        <p id="readyInfo" class="text-base text-sky-600 font-bold mb-6"></p>
+        <button id="btnStart" class="btn-3d w-full sm:w-auto sm:px-16 bg-pink-500 hover:bg-pink-600 text-white rounded-full py-6 text-3xl font-bold">▶️ 開始聆聽</button>
+      </div>
+
+      <!-- 進行中 -->
+      <div id="stagePlaying" class="hidden-view">
+        <div class="text-lg font-bold text-slate-500">第 <span id="qNum" class="text-4xl text-sky-600">1</span> 題 / 共 <span id="qTotal">10</span> 題</div>
+        <div class="w-full bg-slate-100 rounded-full h-3 mt-2 overflow-hidden"><div id="progressBar" class="bg-sky-400 h-3 rounded-full transition-all" style="width:0%"></div></div>
+
+        <div class="relative mx-auto my-6 w-56 h-56 sm:w-64 sm:h-64">
+          <svg viewBox="0 0 120 120" class="w-full h-full -rotate-90">
+            <circle cx="60" cy="60" r="52" fill="none" stroke-width="10" class="ring-track"/>
+            <circle id="ring" cx="60" cy="60" r="52" fill="none" stroke-width="10" stroke-linecap="round" class="ring-bar" stroke-dasharray="326.73" stroke-dashoffset="326.73"/>
+          </svg>
+          <div class="absolute inset-0 flex flex-col items-center justify-center">
+            <div id="phaseIcon" class="text-6xl">🔊</div>
+            <div id="countdown" class="text-5xl font-bold text-green-600 hidden-view">8</div>
+            <div id="speakWave" class="wave mt-2"><span></span><span></span><span></span><span></span></div>
+          </div>
+        </div>
+        <div id="phaseText" class="text-2xl sm:text-3xl font-bold text-slate-700 mb-6 min-h-[2.5rem]">仔細聽…</div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <button id="btnPause" class="btn-3d bg-amber-400 text-amber-900 rounded-3xl py-5 text-xl sm:text-2xl font-bold">⏸️<br>暫停</button>
+          <button id="btnReplay" class="btn-3d bg-sky-500 text-white rounded-3xl py-5 text-xl sm:text-2xl font-bold">🔁<br>重播本題</button>
+          <button id="btnNext" class="btn-3d bg-violet-500 text-white rounded-3xl py-5 text-xl sm:text-2xl font-bold">⏭️<br>下一題</button>
+        </div>
+        <button id="btnStop" class="mt-6 text-sm text-slate-400 underline">結束測驗</button>
+      </div>
+
+      <!-- 結束 -->
+      <div id="stageDone" class="hidden-view py-6">
+        <div class="text-8xl pop">🎉</div>
+        <h2 class="text-3xl sm:text-4xl font-bold text-pink-600 mt-3">測驗結束！</h2>
+        <p class="text-2xl sm:text-3xl font-bold text-slate-700 mt-3 leading-relaxed">請交給爸爸媽媽<br>改考卷囉！👏</p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center mt-8">
+          <button id="btnAnswerDone" class="btn-3d bg-amber-300 text-amber-900 rounded-full px-8 py-4 text-xl font-bold">🔒 查看解答（家長）</button>
+          <button id="btnAgain" class="btn-3d bg-sky-500 text-white rounded-full px-8 py-4 text-xl font-bold">🔄 再考一次</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ================= 密碼彈窗 ================= -->
+<div id="pwModal" class="hidden-view fixed inset-0 bg-slate-900/60 z-40 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center pop">
+    <div class="text-5xl">🔒</div>
+    <h3 id="pwTitle" class="text-2xl font-bold mt-2">家長專用</h3>
+    <p class="text-slate-500 mb-4">請輸入家長密碼</p>
+    <div class="relative">
+      <input id="pwInput" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" class="w-full text-center text-3xl tracking-widest border-2 border-slate-200 rounded-2xl py-3 px-12 outline-none focus:border-sky-400">
+      <button id="pwEye" type="button" aria-pressed="false" class="absolute right-2 top-1/2 -translate-y-1/2 text-2xl px-2" title="顯示／隱藏密碼">👁️</button>
+    </div>
+    <p id="pwShow" class="hidden-view text-2xl font-bold text-sky-700 mt-2 tracking-widest break-all"></p>
+    <p id="pwError" class="text-red-500 font-bold min-h-[1.5rem] mt-2"></p>
+    <div id="resetBox" class="hidden-view bg-amber-50 rounded-2xl p-3 mb-2 text-left">
+      <p class="text-sm font-bold">🧮 大人驗證：請算出答案，就會把密碼重設成 <b>1234</b>（單字清單不會被刪除）</p>
+      <p id="resetQ" class="text-2xl font-bold text-center my-2"></p>
+      <div class="flex gap-2">
+        <input id="resetAns" type="text" inputmode="numeric" autocomplete="off" class="flex-1 min-w-0 text-center text-xl border-2 border-amber-200 rounded-xl py-2 outline-none">
+        <button id="resetOk" class="btn-3d bg-amber-400 text-amber-900 rounded-xl px-4 font-bold">重設</button>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-2">
+      <button id="pwCancel" class="btn-3d flex-1 bg-slate-200 rounded-2xl py-3 font-bold">取消</button>
+      <button id="pwOk" class="btn-3d flex-1 bg-sky-500 text-white rounded-2xl py-3 font-bold">解鎖</button>
+    </div>
+    <button id="btnForgot" class="mt-4 text-sm text-slate-400 underline">忘記密碼？</button>
+  </div>
+</div>
+
+<!-- ================= 解答彈窗 ================= -->
+<div id="ansModal" class="hidden-view fixed inset-0 bg-slate-900/60 z-40 flex items-center justify-center p-4">
+  <div class="bg-white rounded-3xl p-5 sm:p-6 w-full max-w-lg max-h-[90vh] flex flex-col pop">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-2xl font-bold">🔓 標準答案</h3>
+      <button id="ansClose" class="text-3xl leading-none text-slate-400 hover:text-slate-600">×</button>
+    </div>
+    <p id="ansNote" class="text-sm text-slate-500 mb-2"></p>
+    <div class="overflow-auto flex-1 rounded-2xl border">
+      <table class="w-full text-left">
+        <thead class="bg-sky-50 sticky top-0"><tr><th class="p-3 w-12">#</th><th class="p-3">英文</th><th class="p-3">中文</th><th class="p-3 w-12"></th></tr></thead>
+        <tbody id="ansBody"></tbody>
+      </table>
+    </div>
+    <button id="ansClose2" class="btn-3d mt-4 bg-slate-700 text-white rounded-2xl py-3 font-bold">🔒 關閉並上鎖</button>
+  </div>
+</div>
+
+<script>
+/* ================= 儲存 ================= */
+const LS = { words: 'dictation_words_v1', settings: 'dictation_settings_v1', pw: 'dictation_pw_v1' };
+function load(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+
+const DEFAULT_SETTINGS = { rate: 0.85, repeat: 2, gap: 8, mode: 'random', accent: 'en-US', voiceURI: '', sayNumber: true, sayChinese: false };
+let settings = Object.assign({}, DEFAULT_SETTINGS, load(LS.settings, {}));
+let rawWords = load(LS.words, '');
+let words = parseWords(rawWords);
+const getPw = () => String(load(LS.pw, '1234') || '1234');
+let pwVisible = false;
+// 注音鍵盤按鍵 → 英數鍵（避免輸入法開著注音時打出 ㄅㄉˇˋ）
+const ZHUYIN = 'ㄅ1ㄉ2ˇ3ˋ4ㄓ5ˊ6˙7ㄚ8ㄞ9ㄢ0ㄦ-ㄆqㄊwㄍeㄐrㄔtㄗyㄧuㄛiㄟoㄣpㄇaㄋsㄎdㄑfㄕgㄘhㄨjㄜkㄠlㄤ;ㄈzㄌxㄏcㄒvㄖbㄙnㄩmㄝ,ㄡ.ㄥ/';
+const ZMAP = {}; for (let i = 0; i < ZHUYIN.length; i += 2) ZMAP[ZHUYIN[i]] = ZHUYIN[i + 1];
+function normPw(s) {
+  return String(s).trim()
+    .replace(/[\uFF01-\uFF5E]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)) // 全形→半形
+    .replace(/./g, c => ZMAP[c] || c)
+    .toLowerCase();
+}
+// 檢查這個瀏覽器能不能記住資料
+function storageWorks() {
+  try { const k = '__dict_test__'; localStorage.setItem(k, '1'); const ok = localStorage.getItem(k) === '1'; localStorage.removeItem(k); return ok; } catch (e) { return false; }
+}
+
+const $ = id => document.getElementById(id);
+const show = (el, yes) => el.classList.toggle('hidden-view', !yes);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ================= 解析單字 ================= */
+function parseWords(text) {
+  const list = [];
+  (text || '').split(/\r?\n/).forEach(line => {
+    line = line.trim().replace(/^\d+[\.\)、]\s*/, ''); // 去掉開頭編號 "1. "
+    if (!line) return;
+    const m = line.match(/^[A-Za-z][A-Za-z '’\-.?!]*/);
+    if (!m) return;
+    const en = m[0].trim().replace(/[\s\-]+$/, '');
+    const zh = line.slice(m[0].length).replace(/^[\s,，:：\t\-=|/]+/, '').trim();
+    if (en) list.push({ en, zh });
+  });
+  return list;
+}
+
+/* ================= 語音 ================= */
+const synth = window.speechSynthesis;
+let voices = [];
+function loadVoices() {
+  if (!synth) return;
+  voices = synth.getVoices().filter(v => /^en[-_]/i.test(v.lang) || v.lang === 'en');
+  const sel = $('voiceSelect');
+  const accentVoices = voices.filter(v => v.lang.replace('_', '-').toLowerCase().startsWith(settings.accent.toLowerCase()));
+  const listed = accentVoices.length ? accentVoices : voices;
+  sel.innerHTML = '<option value="">（自動選擇）</option>' +
+    listed.map(v => `<option value="${esc(v.voiceURI)}">${esc(v.name)} (${esc(v.lang)})</option>`).join('');
+  sel.value = listed.some(v => v.voiceURI === settings.voiceURI) ? settings.voiceURI : '';
+}
+function pickVoice() {
+  if (settings.voiceURI) { const v = voices.find(v => v.voiceURI === settings.voiceURI); if (v) return v; }
+  const acc = settings.accent.toLowerCase();
+  const same = voices.filter(v => v.lang.replace('_', '-').toLowerCase() === acc);
+  return same.find(v => /google|samantha|daniel|natural|enhanced/i.test(v.name)) || same[0] || voices[0] || null;
+}
+function pickZhVoice() {
+  const all = synth.getVoices();
+  return all.find(v => /zh[-_]TW/i.test(v.lang)) || all.find(v => /^zh/i.test(v.lang)) || null;
+}
+function speak(text, opts = {}) {
+  return new Promise(resolve => {
+    if (!synth) return resolve();
+    const u = new SpeechSynthesisUtterance(text);
+    if (opts.zh) { u.lang = 'zh-TW'; const v = pickZhVoice(); if (v) u.voice = v; u.rate = 0.95; }
+    else { u.lang = settings.accent; const v = pickVoice(); if (v) u.voice = v; u.rate = settings.rate; }
+    let done = false;
+    const finish = () => { if (!done) { done = true; clearTimeout(t); resolve(); } };
+    u.onend = finish; u.onerror = finish;
+    // 保險：某些瀏覽器偶爾不觸發 onend
+    const t = setTimeout(finish, 2500 + text.length * 450 / (u.rate || 1));
+    window.__utt = u; // 避免被回收導致 onend 不觸發
+    synth.speak(u);
+  });
+}
+if (synth) { loadVoices(); synth.onvoiceschanged = loadVoices; }
+
+/* ================= 測驗流程 ================= */
+const run = { order: [], idx: 0, token: 0, state: 'idle' }; // idle | playing | paused | done
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const RING = 326.73;
+let wakeLock = null;
+
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function setPhase(phase, sec) {
+  const speaking = phase === 'speak';
+  show($('speakWave'), speaking);
+  show($('phaseIcon'), phase !== 'write');
+  show($('countdown'), phase === 'write');
+  if (speaking) { $('phaseIcon').textContent = '🔊'; $('phaseText').textContent = '仔細聽…'; $('ring').style.strokeDashoffset = RING; }
+  if (phase === 'write') { $('phaseText').textContent = '✏️ 請寫下來！'; }
+  if (phase === 'paused') { $('phaseIcon').textContent = '⏸️'; $('phaseText').textContent = '暫停中，準備好再按「繼續」'; }
+}
+function updateHeader() {
+  $('qNum').textContent = run.idx + 1;
+  $('qTotal').textContent = run.order.length;
+  $('progressBar').style.width = (run.idx / run.order.length * 100) + '%';
+  const paused = run.state === 'paused';
+  $('btnPause').innerHTML = paused ? '▶️<br>繼續' : '⏸️<br>暫停';
+  $('btnPause').className = 'btn-3d rounded-3xl py-5 text-xl sm:text-2xl font-bold ' + (paused ? 'bg-green-500 text-white' : 'bg-amber-400 text-amber-900');
+  $('btnNext').innerHTML = run.idx >= run.order.length - 1 ? '🏁<br>完成' : '⏭️<br>下一題';
+}
+function showStage(name) {
+  show($('stageReady'), name === 'ready');
+  show($('stagePlaying'), name === 'playing');
+  show($('stageDone'), name === 'done');
+}
+
+async function playFrom(i) {
+  const tok = ++run.token;
+  if (synth) synth.cancel();
+  run.idx = i; run.state = 'playing';
+  showStage('playing'); updateHeader();
+  while (run.idx < run.order.length) {
+    if (tok !== run.token) return;
+    const w = run.order[run.idx];
+    updateHeader(); setPhase('speak');
+    await sleep(400); if (tok !== run.token) return;
+    if (settings.sayNumber) { await speak(`Number ${run.idx + 1}.`); if (tok !== run.token) return; await sleep(600); }
+    for (let r = 0; r < settings.repeat; r++) {
+      if (tok !== run.token) return;
+      await speak(w.en);
+      if (tok !== run.token) return;
+      if (r < settings.repeat - 1) await sleep(1000);
+    }
+    if (settings.sayChinese && w.zh) { await sleep(500); if (tok !== run.token) return; await speak(w.zh, { zh: true }); }
+    if (tok !== run.token) return;
+    // 留白倒數
+    setPhase('write');
+    const total = settings.gap * 1000;
+    for (let t = 0; t <= total; t += 250) {
+      if (tok !== run.token) return;
+      $('countdown').textContent = Math.max(1, Math.ceil((total - t) / 1000));
+      $('ring').style.strokeDashoffset = RING * (1 - t / total);
+      await sleep(250);
+    }
+    run.idx++;
+  }
+  finishQuiz();
+}
+
+function startQuiz() {
+  if (!words.length) { alert('還沒有單字喔！請爸爸媽媽先到「⚙️ 家長」輸入單字。'); return; }
+  run.order = settings.mode === 'random' ? shuffle(words) : words.slice();
+  try { if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(l => wakeLock = l).catch(() => {}); } catch (e) {}
+  playFrom(0);
+}
+function pauseQuiz() {
+  if (run.state === 'playing') {
+    run.token++; if (synth) synth.cancel();
+    run.state = 'paused'; setPhase('paused'); show($('speakWave'), false); updateHeader();
+  } else if (run.state === 'paused') {
+    playFrom(run.idx); // 從本題重新唸
+  }
+}
+function nextQ() {
+  if (run.idx >= run.order.length - 1) finishQuiz();
+  else playFrom(run.idx + 1);
+}
+function finishQuiz() {
+  run.token++; if (synth) synth.cancel();
+  run.state = 'done';
+  $('progressBar').style.width = '100%';
+  showStage('done');
+  try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+  speak('Great job! The test is over.');
+}
+function stopQuiz() {
+  if (!confirm('確定要結束這次測驗嗎？')) return;
+  finishQuiz();
+}
+
+/* ================= 密碼 ================= */
+let pwCallback = null;
+function askPassword(title, cb) {
+  $('pwTitle').textContent = title;
+  $('pwInput').value = ''; $('pwError').textContent = '';
+  show($('resetBox'), false);
+  pwVisible = false; $('pwEye').textContent = '👁️'; show($('pwShow'), false); $('pwShow').textContent = '';
+  pwCallback = cb; show($('pwModal'), true);
+  setTimeout(() => $('pwInput').focus(), 50);
+}
+function checkPw() {
+  // 去掉前後空白、全形數字轉半形，避免手機鍵盤造成比對失敗
+  const typed = normPw($('pwInput').value);
+  if (typed === normPw(getPw())) {
+    show($('pwModal'), false);
+    const cb = pwCallback; pwCallback = null; cb && cb();
+  } else {
+    $('pwError').textContent = /[^\x20-\x7E]/.test(typed)
+      ? '偵測到中文字，請切換成英文輸入法再試一次'
+      : '密碼不對喔 🙅';
+    $('pwInput').value = '';
+    $('pwInput').animate([{ transform: 'translateX(-8px)' }, { transform: 'translateX(8px)' }, { transform: 'translateX(0)' }], { duration: 250 });
+  }
+}
+
+/* ================= 解答 ================= */
+function openAnswers() {
+  const list = run.order.length ? run.order : words;
+  $('ansNote').textContent = run.order.length
+    ? (settings.mode === 'random' ? '以下是本次「隨機出題」的實際順序，請對照小朋友的考卷批改。' : '以下依照出題順序排列。')
+    : '尚未開始測驗，以下依輸入順序顯示。';
+  $('ansBody').innerHTML = list.map((w, i) => `
+    <tr class="border-t ${i % 2 ? 'bg-slate-50' : ''}">
+      <td class="p-3 font-bold text-slate-400">${i + 1}</td>
+      <td class="p-3 text-xl font-bold text-sky-700">${esc(w.en)}</td>
+      <td class="p-3">${esc(w.zh || '')}</td>
+      <td class="p-3"><button class="text-xl" data-say="${esc(w.en)}" title="唸一次">🔊</button></td>
+    </tr>`).join('') || '<tr><td colspan="4" class="p-6 text-center text-slate-400">還沒有單字</td></tr>';
+  show($('ansModal'), true);
+}
+function closeAnswers() { show($('ansModal'), false); $('ansBody').innerHTML = ''; }
+
+/* ================= 設定畫面 ================= */
+function refreshPills() {
+  document.querySelectorAll('[data-group]').forEach(g => {
+    const key = g.dataset.group;
+    g.querySelectorAll('.pill').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value) === String(settings[key])));
+  });
+}
+function refreshPreview() {
+  words = parseWords($('wordInput').value);
+  $('wordCount').textContent = `已辨識 ${words.length} 個單字`;
+  $('wordPreview').innerHTML = words.map((w, i) =>
+    `<span class="bg-sky-50 border border-sky-200 rounded-full px-3 py-1 text-sm"><b class="text-slate-400">${i + 1}.</b> ${esc(w.en)}${w.zh ? ' <span class="text-slate-500">' + esc(w.zh) + '</span>' : ''}</span>`).join('');
+}
+function saveAll() {
+  rawWords = $('wordInput').value;
+  words = parseWords(rawWords);
+  settings.sayNumber = $('optNumber').checked;
+  settings.sayChinese = $('optChinese').checked;
+  settings.voiceURI = $('voiceSelect').value;
+  save(LS.words, rawWords);
+  save(LS.settings, settings);
+}
+function openSettings() {
+  if (run.state === 'playing' || run.state === 'paused') { run.token++; if (synth) synth.cancel(); run.state = 'idle'; }
+  $('wordInput').value = rawWords;
+  $('optNumber').checked = settings.sayNumber;
+  $('optChinese').checked = settings.sayChinese;
+  refreshPills(); refreshPreview(); loadVoices();
+  show($('viewSettings'), true); show($('viewQuiz'), false);
+  window.scrollTo(0, 0);
+}
+function openQuiz() {
+  show($('viewSettings'), false); show($('viewQuiz'), true);
+  run.state = 'idle'; run.order = [];
+  $('readyInfo').textContent = words.length
+    ? `共 ${words.length} 題｜每個單字唸 ${settings.repeat} 遍｜每題 ${settings.gap} 秒寫字時間`
+    : '⚠️ 還沒有單字，請家長先設定';
+  showStage('ready');
+  window.scrollTo(0, 0);
+}
+
+/* ================= 事件綁定 ================= */
+document.querySelectorAll('[data-group]').forEach(g => {
+  g.addEventListener('click', e => {
+    const b = e.target.closest('.pill'); if (!b) return;
+    const key = g.dataset.group; const val = b.dataset.value;
+    settings[key] = isNaN(val) ? val : Number(val);
+    if (key === 'accent') { settings.voiceURI = ''; loadVoices(); }
+    refreshPills(); save(LS.settings, settings);
+  });
+});
+$('wordInput').addEventListener('input', refreshPreview);
+$('btnSample').onclick = () => {
+  $('wordInput').value = 'apple 蘋果\nbanana 香蕉\ncat 貓\ndog 狗\nelephant 大象\nice cream 冰淇淋\nschool 學校\nteacher 老師';
+  refreshPreview();
+};
+$('btnClear').onclick = () => { if (confirm('確定清空所有單字？')) { $('wordInput').value = ''; refreshPreview(); } };
+$('voiceSelect').onchange = () => { settings.voiceURI = $('voiceSelect').value; save(LS.settings, settings); };
+$('btnTestVoice').onclick = () => { if (synth) synth.cancel(); speak((words[0] && words[0].en) || 'Hello! Are you ready?'); };
+$('btnSavePw').onclick = () => {
+  const v = normPw($('newPw').value);
+  if (v.length < 3) { $('pwHint').textContent = '⚠️ 密碼至少 3 個字元'; return; }
+  if (/[^\x20-\x7E]/.test(v)) { $('pwHint').textContent = '⚠️ 密碼只能用英文字母、數字或符號，請切換成英文輸入法'; return; }
+  save(LS.pw, v);
+  $('newPw').value = ''; $('newPwShow').textContent = '';
+  if (getPw() === v) $('pwHint').textContent = `✅ 密碼已更新為「${v}」，請記住它！`;
+  else $('pwHint').textContent = '❌ 這個瀏覽器沒辦法記住密碼（可能是預覽視窗或無痕模式），密碼仍是原本的。請用 Chrome 或 Safari 直接打開這個檔案。';
+};
+$('btnGoQuiz').onclick = () => {
+  saveAll();
+  if (!words.length) { alert('請至少輸入一個英文單字喔！'); return; }
+  openQuiz();
+};
+
+$('btnParent').onclick = () => {
+  if (!$('viewSettings').classList.contains('hidden-view')) return;
+  askPassword('進入家長設定', openSettings);
+};
+const answerHandler = () => askPassword('查看解答', openAnswers);
+$('btnAnswerTop').onclick = answerHandler;
+$('btnAnswerDone').onclick = answerHandler;
+
+$('btnStart').onclick = startQuiz;
+$('btnPause').onclick = pauseQuiz;
+$('btnReplay').onclick = () => playFrom(run.idx);
+$('btnNext').onclick = nextQ;
+$('btnStop').onclick = stopQuiz;
+$('btnAgain').onclick = () => openQuiz();
+
+$('pwOk').onclick = checkPw;
+$('pwCancel').onclick = () => { show($('pwModal'), false); pwCallback = null; };
+$('pwInput').addEventListener('input', () => { $('pwShow').textContent = $('pwInput').value; });
+$('newPw').addEventListener('input', () => {
+  const v = $('newPw').value;
+  $('newPwShow').textContent = v ? '你輸入的新密碼是：' + normPw(v) : '';
+});
+$('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPw(); });
+
+$('pwEye').onclick = () => {
+  pwVisible = !pwVisible;
+  $('pwEye').textContent = pwVisible ? '🙈' : '👁️';
+  $('pwShow').textContent = $('pwInput').value;
+  show($('pwShow'), pwVisible);
+  $('pwInput').focus();
+};
+
+/* 忘記密碼：大人算術驗證後重設為 1234 */
+let resetAnswer = 0;
+$('btnForgot').onclick = () => {
+  const a = 13 + Math.floor(Math.random() * 37), b = 12 + Math.floor(Math.random() * 38);
+  resetAnswer = a * b;
+  $('resetQ').textContent = `${a} × ${b} = ?`;
+  $('resetAns').value = '';
+  show($('resetBox'), true);
+  $('resetAns').focus();
+};
+$('resetOk').onclick = () => {
+  if (Number($('resetAns').value.trim()) === resetAnswer) {
+    save(LS.pw, '1234');
+    show($('resetBox'), false);
+    $('pwError').innerHTML = '<span class="text-green-600">✅ 密碼已重設為 1234</span>';
+    $('pwInput').value = ''; $('pwInput').focus();
+  } else {
+    $('resetAns').value = '';
+    $('resetAns').placeholder = '答案不對，再算一次';
+  }
+};
+$('ansClose').onclick = closeAnswers;
+$('ansClose2').onclick = closeAnswers;
+$('ansBody').addEventListener('click', e => { const b = e.target.closest('[data-say]'); if (b) { synth && synth.cancel(); speak(b.dataset.say); } });
+
+/* ================= 初始化 ================= */
+if (!storageWorks()) {
+  const bar = document.createElement('div');
+  bar.className = 'max-w-3xl mx-auto mt-3 mx-4 bg-red-100 text-red-700 rounded-2xl p-3 text-sm font-bold';
+  bar.textContent = '⚠️ 這個視窗無法記住單字和密碼（可能是預覽視窗或無痕模式），密碼會一直是 1234。請下載檔案後用 Chrome 或 Safari 打開。';
+  document.body.insertBefore(bar, document.querySelector('main'));
+}
+if (!synth) alert('這個瀏覽器不支援語音朗讀，請改用 Chrome、Safari 或 Edge。');
+// 第一次使用（還沒有單字）直接進設定；之後打開就是測驗畫面
+if (!words.length) openSettings(); else openQuiz();
+</script>
+</body>
+</html>
