@@ -30,6 +30,8 @@
   .wave span:nth-child(3){animation-delay:.3s;background:#facc15}
   .wave span:nth-child(4){animation-delay:.45s;background:#22c55e}
   .hidden-view { display: none !important; }
+  @keyframes pulseNext { 0%,100%{ transform: scale(1); box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 0 rgba(139,92,246,.6);} 50%{ transform: scale(1.06); box-shadow: 0 6px 0 rgba(0,0,0,.18), 0 0 0 14px rgba(139,92,246,0);} }
+  .pulse-next { animation: pulseNext 1.2s infinite; }
 </style>
 </head>
 <body class="bg-kid min-h-screen text-slate-700">
@@ -85,7 +87,14 @@
           </div>
         </div>
         <div>
-          <div class="font-bold mb-2">⏱️ 寫字時間（每題間隔）</div>
+          <div class="font-bold mb-2">👉 換題方式</div>
+          <div class="flex gap-2" data-group="advance">
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="manual">按「下一題」才換</button>
+            <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="auto">倒數後自動換</button>
+          </div>
+        </div>
+        <div id="gapBox">
+          <div class="font-bold mb-2">⏱️ 寫字時間（自動換題才會用到）</div>
           <div class="flex gap-2" data-group="gap">
             <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="5">5 秒</button>
             <button class="pill flex-1 border-2 rounded-xl py-2 font-bold" data-value="8">8 秒</button>
@@ -241,7 +250,7 @@ const LS = { words: 'dictation_words_v1', settings: 'dictation_settings_v1', pw:
 function load(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
 function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
 
-const DEFAULT_SETTINGS = { rate: 0.85, repeat: 2, gap: 8, mode: 'random', accent: 'en-US', voiceURI: '', sayNumber: true, sayChinese: false };
+const DEFAULT_SETTINGS = { rate: 0.85, repeat: 2, gap: 8, mode: 'random', accent: 'en-US', voiceURI: '', sayNumber: true, sayChinese: false, advance: 'manual' };
 let settings = Object.assign({}, DEFAULT_SETTINGS, load(LS.settings, {}));
 let rawWords = load(LS.words, '');
 let words = parseWords(rawWords);
@@ -335,6 +344,12 @@ function setPhase(phase, sec) {
   show($('countdown'), phase === 'write');
   if (speaking) { $('phaseIcon').textContent = '🔊'; $('phaseText').textContent = '仔細聽…'; $('ring').style.strokeDashoffset = RING; }
   if (phase === 'write') { $('phaseText').textContent = '✏️ 請寫下來！'; }
+  if (phase === 'wait') {
+    $('phaseIcon').textContent = '✏️';
+    $('ring').style.strokeDashoffset = 0;
+    $('phaseText').textContent = run.idx >= run.order.length - 1 ? '寫好了就按「完成」🏁' : '寫好了就按「下一題」👉';
+  }
+  $('btnNext').classList.toggle('pulse-next', phase === 'wait');
   if (phase === 'paused') { $('phaseIcon').textContent = '⏸️'; $('phaseText').textContent = '暫停中，準備好再按「繼續」'; }
 }
 function updateHeader() {
@@ -371,7 +386,9 @@ async function playFrom(i) {
     }
     if (settings.sayChinese && w.zh) { await sleep(500); if (tok !== run.token) return; await speak(w.zh, { zh: true }); }
     if (tok !== run.token) return;
-    // 留白倒數
+    // 手動模式：停在這裡，等按「下一題」
+    if (settings.advance !== 'auto') { setPhase('wait'); return; }
+    // 自動模式：留白倒數
     setPhase('write');
     const total = settings.gap * 1000;
     for (let t = 0; t <= total; t += 250) {
@@ -460,6 +477,7 @@ function closeAnswers() { show($('ansModal'), false); $('ansBody').innerHTML = '
 
 /* ================= 設定畫面 ================= */
 function refreshPills() {
+  const g = $('gapBox'); if (g) g.style.opacity = settings.advance === 'auto' ? '1' : '.4';
   document.querySelectorAll('[data-group]').forEach(g => {
     const key = g.dataset.group;
     g.querySelectorAll('.pill').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value) === String(settings[key])));
@@ -493,7 +511,7 @@ function openQuiz() {
   show($('viewSettings'), false); show($('viewQuiz'), true);
   run.state = 'idle'; run.order = [];
   $('readyInfo').textContent = words.length
-    ? `共 ${words.length} 題｜每個單字唸 ${settings.repeat} 遍｜每題 ${settings.gap} 秒寫字時間`
+    ? `共 ${words.length} 題｜每個單字唸 ${settings.repeat} 遍｜` + (settings.advance === 'auto' ? `每題 ${settings.gap} 秒寫字時間` : '寫好後按「下一題」繼續')
     : '⚠️ 還沒有單字，請家長先設定';
   showStage('ready');
   window.scrollTo(0, 0);
